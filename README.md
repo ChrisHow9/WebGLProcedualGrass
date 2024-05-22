@@ -1,3 +1,39 @@
+Goals of project - 
+
+provide non triivial implenattion of grass generationa and rendering 
+
+This is a demo so solution should be time effecient to implement ie do not spend 4 hour improving performance by 5%
+
+Should be online and available to whowever may want to access it (should be taken into considertion for performanc and which platforms it can run on)
+
+Research - 
+
+
+Core Deliverable 
+
+- Represenation of grass using bezier curves 
+
+- Insance rendering for field 
+
+- grass should retian length 
+
+- wind patterns using noise
+
+
+Extensions 
+
+- level of detail
+
+- culling 
+
+- shading
+
+- anti alising
+
+- debug ui
+
+
+
 sources 
 
 https://www.youtube.com/watch?v=2h5NX9tIdno
