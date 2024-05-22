@@ -3,10 +3,74 @@ import * as THREE from 'three';
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+const cameraControls = {
+    moveForward: false,
+    moveBackward: false,
+    moveLeft: false,
+    moveRight: false,
+    velocity: new THREE.Vector3(),
+    direction: new THREE.Vector3(),
+};
+
+document.addEventListener('keydown', (event) => {
+    switch (event.code) {
+        case 'KeyW':
+            cameraControls.moveForward = true;
+            break;
+        case 'KeyS':
+            cameraControls.moveBackward = true;
+            break;
+        case 'KeyA':
+            cameraControls.moveLeft = true;
+            break;
+        case 'KeyD':
+            cameraControls.moveRight = true;
+            break;
+    }
+});
+
+document.addEventListener('keyup', (event) => {
+    switch (event.code) {
+        case 'KeyW':
+            cameraControls.moveForward = false;
+            break;
+        case 'KeyS':
+            cameraControls.moveBackward = false;
+            break;
+        case 'KeyA':
+            cameraControls.moveLeft = false;
+            break;
+        case 'KeyD':
+            cameraControls.moveRight = false;
+            break;
+    }
+});
+
+function updateCameraPosition(delta) {
+    cameraControls.velocity.set(0, 0, 0);
+
+    if (cameraControls.moveForward) cameraControls.velocity.z -= 100;
+    if (cameraControls.moveBackward) cameraControls.velocity.z += 100;
+    if (cameraControls.moveLeft) cameraControls.velocity.x -= 10;
+    if (cameraControls.moveRight) cameraControls.velocity.x += 10;
+
+    cameraControls.velocity.normalize();
+    cameraControls.velocity.multiplyScalar(0.1 * delta);
+
+    camera.getWorldDirection(cameraControls.direction);
+    cameraControls.direction.y = 0; // Ensure the camera stays level
+    cameraControls.direction.normalize();
+
+    const moveDirection = new THREE.Vector3();
+    moveDirection.copy(cameraControls.direction).multiplyScalar(cameraControls.velocity.z);
+    moveDirection.add(cameraControls.velocity.multiplyScalar(cameraControls.velocity.x));
+
+    camera.position.add(moveDirection);
+}
 
 /*
 
@@ -17,6 +81,7 @@ shading of grass
 normals for grass - see gdc talk
 grass length retain 
 debgug values ui
+grass geo generator
 
 
 
@@ -80,9 +145,9 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.05,1, 1,20);
+const grassGeometry = new THREE.PlaneGeometry(0.05,1, 1,15);
 
-const grassCount = 20000;
+const grassCount = 30000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
     positions.push(Math.random() * 50 - 25);  // x position
@@ -123,6 +188,8 @@ const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    updateCameraPosition(delta);
     //plane.rotation.y += 0.05;
    
    // uniforms.u_time.value += 0.05;

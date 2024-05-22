@@ -20,7 +20,7 @@ Core Deliverable
 - wind patterns using noise
 
 
-Extensions 
+Extensions -
 
 - level of detail
 
@@ -33,8 +33,15 @@ Extensions
 - debug ui
 
 
+Further exploration - 
 
-sources 
+- whilst I have found splines used for creating and rendering I have not found the use bezier curves used for short fur rending - at least I have not seen it from a roudamenatry search 
+
+
+- Frustum culling
+
+
+sources -
 
 https://www.youtube.com/watch?v=2h5NX9tIdno
 - check last sections about making pretty
