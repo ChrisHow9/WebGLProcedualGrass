@@ -31,6 +31,7 @@ uniform float time;
 attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
 varying vec3 bladeNormal;
+varying vec3 vPosition;
 
 vec3 Lerp(vec3 a, vec3 b, float t) {
     return a + t * (b - a);
@@ -46,7 +47,7 @@ void main() {
     
     vec3 bladePosition = vec3(0, 0, 0);
     vec3 bladeDirection = normalize(vec3(1, 0,0 ));
-    bladeDirection = normalize(instancePosition);
+    
     vec3 bladeHeight = vec3(0, 1, 0);
     float grassLeaning = 2.0f;
 
@@ -75,6 +76,7 @@ void main() {
 
     
     bladeNormal = normal;
+    vPosition = pos;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
@@ -82,13 +84,50 @@ void main() {
 
 const fragmentShader = /* glsl */ `
 varying float vY; // Receiving the Y position from vertex shader
-varying vec3 bladeNormal;
+varying vec3 bladeNormal; // Receiving the normal from vertex shader
+varying vec3 vPosition;
+
 void main() {
-    float greenIntensity = 0.4 + 0.6 * vY; // Gradient from darker (0.4) to brighter (1.0)
-    float redIntensity = 0.0 + 0.5 * vY; 
-    gl_FragColor = vec4(abs(bladeNormal), 1.0); // Green color with gradient
+    // Light properties
+    vec3 lightPosition = vec3(1000.0,-1000.0, 0.0); // Example light position
+    vec3 lightColor = vec3(1.0, 1.0, 1.0);
+    
+    // Material properties
+    vec3 ambientColor = vec3(0.0, 0.1, 0.0);
+    vec3 diffuseColor = vec3(0.2, 0.8, 0.2);
+    vec3 specularColor = vec3(1.0, 1.0, 1.0);
+    float shininess = 32.0;
+
+    // Normalize interpolated normal
+    vec3 N = normalize(bladeNormal);
+
+    // Calculate light direction
+    vec3 lightDir = normalize(lightPosition - vPosition);
+
+    // Calculate view direction (from fragment to camera)
+    vec3 viewDir = normalize(-vPosition);
+
+    // Calculate reflection direction
+    vec3 reflectDir = reflect(-lightDir, N);
+
+    // Calculate ambient component
+    vec3 ambient = ambientColor * lightColor;
+
+    // Calculate diffuse component
+    float diff = max(dot(N, lightDir), 0.0);
+    vec3 diffuse = diffuseColor * lightColor * diff;
+
+    // Calculate specular component
+    float spec = pow(max(dot(reflectDir, viewDir), 0.0), shininess);
+    vec3 specular = specularColor * lightColor * spec;
+
+    // Combine ambient, diffuse, and specular components
+    vec3 result = ambient + diffuse ;
+
+    gl_FragColor = vec4(result, 1.0);
 }
 `;
+
 
 
 
@@ -101,14 +140,14 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.1,1, 1,15);
+const grassGeometry = new THREE.PlaneGeometry(0.1,1, 1,10);
 
-const grassCount = 8000;
+const grassCount = 1500000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
-    positions.push(Math.random() * 50 - 25);  // x position
+    positions.push(Math.random() * 500 - 250);  // x position
     positions.push(0.5);  // y position
-    positions.push(Math.random() * 50 - 20);  // z position
+    positions.push(Math.random() * 500 - 250);  // z position
 }
 
 const instancedGeometry = new THREE.InstancedBufferGeometry().copy(grassGeometry);
