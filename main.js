@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
@@ -7,75 +7,13 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const cameraControls = {
-    moveForward: false,
-    moveBackward: false,
-    moveLeft: false,
-    moveRight: false,
-    velocity: new THREE.Vector3(),
-    direction: new THREE.Vector3(),
-};
 
-document.addEventListener('keydown', (event) => {
-    switch (event.code) {
-        case 'KeyW':
-            cameraControls.moveForward = true;
-            break;
-        case 'KeyS':
-            cameraControls.moveBackward = true;
-            break;
-        case 'KeyA':
-            cameraControls.moveLeft = true;
-            break;
-        case 'KeyD':
-            cameraControls.moveRight = true;
-            break;
-    }
-});
 
-document.addEventListener('keyup', (event) => {
-    switch (event.code) {
-        case 'KeyW':
-            cameraControls.moveForward = false;
-            break;
-        case 'KeyS':
-            cameraControls.moveBackward = false;
-            break;
-        case 'KeyA':
-            cameraControls.moveLeft = false;
-            break;
-        case 'KeyD':
-            cameraControls.moveRight = false;
-            break;
-    }
-});
-
-function updateCameraPosition(delta) {
-    cameraControls.velocity.set(0, 0, 0);
-
-    if (cameraControls.moveForward) cameraControls.velocity.z -= 100;
-    if (cameraControls.moveBackward) cameraControls.velocity.z += 100;
-    if (cameraControls.moveLeft) cameraControls.velocity.x -= 10;
-    if (cameraControls.moveRight) cameraControls.velocity.x += 10;
-
-    cameraControls.velocity.normalize();
-    cameraControls.velocity.multiplyScalar(0.1 * delta);
-
-    camera.getWorldDirection(cameraControls.direction);
-    cameraControls.direction.y = 0; // Ensure the camera stays level
-    cameraControls.direction.normalize();
-
-    const moveDirection = new THREE.Vector3();
-    moveDirection.copy(cameraControls.direction).multiplyScalar(cameraControls.velocity.z);
-    moveDirection.add(cameraControls.velocity.multiplyScalar(cameraControls.velocity.x));
-
-    camera.position.add(moveDirection);
-}
+//var camControls = new THREE.FirstPersonControls(camera);
 
 /*
 
 TODO:
-Fps camera?
 tips of grass 
 shading of grass 
 normals for grass - see gdc talk
@@ -92,22 +30,28 @@ const vertexShader = /* glsl */ `
 uniform float time;
 attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
+varying vec3 bladeNormal;
 
 vec3 Lerp(vec3 a, vec3 b, float t) {
     return a + t * (b - a);
+}
+
+vec3 bezierDerivative(vec3 p0, vec3 p1, vec3 p2, float t)
+{
+    return 2. * (1. - t) * (p1 - p0) + 2. * t * (p2 - p1);
 }
 
 void main() {
     vec3 pos = position;
     
     vec3 bladePosition = vec3(0, 0, 0);
-    vec3 bladeDirection = vec3(0, 0, 0);
+    vec3 bladeDirection = normalize(vec3(sin(time) *2.0, 0,1 ));
     vec3 bladeHeight = vec3(0, 1, 0);
-    float grassLeaning = -1.0f;
+    float grassLeaning = 2.0f;
 
     vec3 p0 = vec3(0, 0, 0);
-    vec3 p1 = vec3(0, 1, 0);
-    vec3 p2 = vec3(-0.4, 1, sin(time * 2.5));
+    vec3 p1 = bladeHeight;
+    vec3 p2 = grassLeaning * bladeDirection + bladeHeight;
 
     float t = clamp(pos.y, 0.0, 1.0);
 
@@ -120,17 +64,29 @@ void main() {
 
     vY = pos.y; // Pass Y position to fragment shader
 
+    vec3 sideVec = normalize(vec3(bladeDirection.y, -bladeDirection.x,0));
+    vec3 normal = cross(sideVec, normalize(bezierDerivative(p0, p1, p2, t)));
+
+
+    vec3 tangent = normalize(bezierDerivative(p0, p1, p2, t));
+    vec3 up = vec3(0,0,1);
+     normal = normalize(cross(tangent,up ));
+
+    
+
+    bladeNormal = normal;
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
 `;
 
 const fragmentShader = /* glsl */ `
 varying float vY; // Receiving the Y position from vertex shader
-
+varying vec3 bladeNormal;
 void main() {
     float greenIntensity = 0.4 + 0.6 * vY; // Gradient from darker (0.4) to brighter (1.0)
-    float redIntensity = 0.0 + 0.3 * vY; 
-    gl_FragColor = vec4(redIntensity, greenIntensity, 0.0, 1.0); // Green color with gradient
+    float redIntensity = 0.0 + 0.5 * vY; 
+    gl_FragColor = vec4(bladeNormal, 1.0); // Green color with gradient
 }
 `;
 
@@ -145,9 +101,9 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.05,1, 1,15);
+const grassGeometry = new THREE.PlaneGeometry(0.04,1, 1,15);
 
-const grassCount = 30000;
+const grassCount = 80000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
     positions.push(Math.random() * 50 - 25);  // x position
@@ -183,13 +139,18 @@ scene.add(ground);
 
 
 camera.position.z = 6;
-camera.position.y = 1.9;
+camera.position.y = 3;
+
+let controls;
+
+controls = new OrbitControls( camera, renderer.domElement );
+
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
-    updateCameraPosition(delta);
+   
     //plane.rotation.y += 0.05;
    
    // uniforms.u_time.value += 0.05;

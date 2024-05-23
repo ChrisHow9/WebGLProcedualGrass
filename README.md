@@ -32,6 +32,9 @@ Extensions -
 
 - debug ui
 
+- clumping
+
+- grass blade thicken depedning on view space
 
 Further exploration - 
 
