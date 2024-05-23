@@ -45,7 +45,8 @@ void main() {
     vec3 pos = position;
     
     vec3 bladePosition = vec3(0, 0, 0);
-    vec3 bladeDirection = normalize(vec3(sin(time) *2.0, 0,1 ));
+    vec3 bladeDirection = normalize(vec3(1, 0,0 ));
+    bladeDirection = normalize(instancePosition);
     vec3 bladeHeight = vec3(0, 1, 0);
     float grassLeaning = 2.0f;
 
@@ -64,16 +65,15 @@ void main() {
 
     vY = pos.y; // Pass Y position to fragment shader
 
-    vec3 sideVec = normalize(vec3(bladeDirection.y, -bladeDirection.x,0));
-    vec3 normal = cross(sideVec, normalize(bezierDerivative(p0, p1, p2, t)));
+    vec3 upDirection = vec3(0, 1, 0); // Assume y-axis is up
+    //vec3 sideVec = normalize(cross(bladeDirection, tangent));
 
-
-    vec3 tangent = normalize(bezierDerivative(p0, p1, p2, t));
-    vec3 up = vec3(0,0,1);
-     normal = normalize(cross(tangent,up ));
+    vec3 tangent = bezierDerivative(p0, p1, p2, t);
+    vec3 sideVec = normalize(cross(bladeDirection, tangent));
+    //vec3 sideVec = normalize(vec3(bladeDirection.z, 0, -bladeDirection.x));
+    vec3 normal = normalize(cross(tangent, sideVec));
 
     
-
     bladeNormal = normal;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -86,7 +86,7 @@ varying vec3 bladeNormal;
 void main() {
     float greenIntensity = 0.4 + 0.6 * vY; // Gradient from darker (0.4) to brighter (1.0)
     float redIntensity = 0.0 + 0.5 * vY; 
-    gl_FragColor = vec4(bladeNormal, 1.0); // Green color with gradient
+    gl_FragColor = vec4(abs(bladeNormal), 1.0); // Green color with gradient
 }
 `;
 
@@ -101,9 +101,9 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.04,1, 1,15);
+const grassGeometry = new THREE.PlaneGeometry(0.1,1, 1,15);
 
-const grassCount = 80000;
+const grassCount = 8000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
     positions.push(Math.random() * 50 - 25);  // x position
