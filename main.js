@@ -41,15 +41,47 @@ vec3 bezierDerivative(vec3 p0, vec3 p1, vec3 p2, float t)
 {
     return 2. * (1. - t) * (p1 - p0) + 2. * t * (p2 - p1);
 }
+// taken from https://www.shadertoy.com/view/4djSRW
+float hash(vec2 p)
+{
+    // Two typical hashes...
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    
+    // This one is better, but it still stretches out quite quickly...
+    // But it's really quite bad on my Mac(!)
+    //return fract(sin(dot(p, vec2(1.0,113.0)))*43758.5453123);
 
+}
+mat2 rotate2d(float _angle){
+    return mat2(cos(_angle),-sin(_angle),
+                sin(_angle),cos(_angle));
+}
+
+mat3 rotation3dY(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+  
+    return mat3(
+      c, 0.0, -s,
+      0.0, 1.0, 0.0,
+      s, 0.0, c
+    );
+  }
+  
+  
 void main() {
     vec3 pos = position;
-    
+
+  
+
+    mat3 roty = rotation3dY(hash(instancePosition.xz));
+   
+    pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
-    vec3 bladeDirection = normalize(vec3(1, 0,0 ));
+     vec3 bladeDirection = normalize(vec3(1,2,0));
     
     vec3 bladeHeight = vec3(0, 1, 0);
-    float grassLeaning = 2.0f;
+    float grassLeaning = 4.0f;
 
     vec3 p0 = vec3(0, 0, 0);
     vec3 p1 = bladeHeight;
@@ -63,6 +95,7 @@ void main() {
 
     pos += c;
     pos += instancePosition;
+  
 
     vY = pos.y; // Pass Y position to fragment shader
 
@@ -71,6 +104,8 @@ void main() {
 
     vec3 tangent = bezierDerivative(p0, p1, p2, t);
     vec3 sideVec = normalize(cross(bladeDirection, tangent));
+    
+
     //vec3 sideVec = normalize(vec3(bladeDirection.z, 0, -bladeDirection.x));
     vec3 normal = normalize(cross(tangent, sideVec));
 
@@ -89,14 +124,13 @@ varying vec3 vPosition;
 
 void main() {
     // Light properties
-    vec3 lightPosition = vec3(1000.0,-1000.0, 0.0); // Example light position
+    vec3 lightPosition = vec3(10.0,-1000.0, 0.0); // Example light position
     vec3 lightColor = vec3(1.0, 1.0, 1.0);
     
     // Material properties
-    vec3 ambientColor = vec3(0.0, 0.1, 0.0);
-    vec3 diffuseColor = vec3(0.2, 0.8, 0.2);
-    vec3 specularColor = vec3(1.0, 1.0, 1.0);
-    float shininess = 32.0;
+    vec3 ambientColor = vec3(0.0, 0.2, 0.0);
+    vec3 diffuseColor = vec3(0.2, 0.9, 0.2);
+
 
     // Normalize interpolated normal
     vec3 N = normalize(bladeNormal);
@@ -105,8 +139,7 @@ void main() {
     vec3 lightDir = normalize(lightPosition - vPosition);
 
     // Calculate view direction (from fragment to camera)
-    vec3 viewDir = normalize(-vPosition);
-
+  
     // Calculate reflection direction
     vec3 reflectDir = reflect(-lightDir, N);
 
@@ -117,12 +150,11 @@ void main() {
     float diff = max(dot(N, lightDir), 0.0);
     vec3 diffuse = diffuseColor * lightColor * diff;
 
-    // Calculate specular component
-    float spec = pow(max(dot(reflectDir, viewDir), 0.0), shininess);
-    vec3 specular = specularColor * lightColor * spec;
+ 
+    
 
     // Combine ambient, diffuse, and specular components
-    vec3 result = ambient + diffuse ;
+    vec3 result = ambient + diffuse;
 
     gl_FragColor = vec4(result, 1.0);
 }
@@ -142,7 +174,7 @@ const material = new THREE.ShaderMaterial({
 
 const grassGeometry = new THREE.PlaneGeometry(0.1,1, 1,10);
 
-const grassCount = 1500000;
+const grassCount = 1000000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
     positions.push(Math.random() * 500 - 250);  // x position
@@ -168,7 +200,7 @@ const dotMaterial = new THREE.PointsMaterial({ size: 0.1, color: 0xff0000 });
 const dot = new THREE.Points(dotGeometry, dotMaterial);
 scene.add(dot);*/
 
-const groundGeometry = new THREE.PlaneGeometry(50, 50);
+const groundGeometry = new THREE.PlaneGeometry(500, 500);
 const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 }); // Forest green
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
