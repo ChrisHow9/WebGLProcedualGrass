@@ -15,6 +15,7 @@ document.body.appendChild(renderer.domElement);
 
 TODO:
 tips of grass 
+wind!!!
 shading of grass 
 normals for grass - see gdc talk
 grass length retain 
@@ -95,6 +96,7 @@ void main() {
 
     pos += c;
     pos += instancePosition;
+    pos -= sin(hash(instancePosition.xz));
   
 
     vY = pos.y; // Pass Y position to fragment shader
@@ -128,7 +130,7 @@ void main() {
     vec3 lightColor = vec3(1.0, 1.0, 1.0);
     
     // Material properties
-    vec3 ambientColor = vec3(0.0, 0.2, 0.0);
+    vec3 ambientColor = vec3(0.1, 0.4, 0.1);
     vec3 diffuseColor = vec3(0.2, 0.9, 0.2);
 
 
@@ -172,7 +174,7 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.1,1, 1,10);
+const grassGeometry = new THREE.PlaneGeometry(0.2,1, 1,10);
 
 const grassCount = 1000000;
 const positions = [];
