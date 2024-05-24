@@ -8,6 +8,9 @@ Should be online and available to whowever may want to access it (should be take
 
 Research - 
 
+webgpu not compatbible with safrai,
+webgl is a potential option but is somewhat barebones and math libaries may be a little undercooked
+three js offers built in libaries for webgl with some tradeoff in having less felxiability
 
 Core Deliverable 
 
@@ -33,6 +36,8 @@ Extensions -
 - debug ui
 
 - clumping
+
+- varing each blades properties
 
 - grass blade thicken depedning on view space
 

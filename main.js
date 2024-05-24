@@ -3,7 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer();
+//const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -53,10 +54,7 @@ float hash(vec2 p)
     //return fract(sin(dot(p, vec2(1.0,113.0)))*43758.5453123);
 
 }
-mat2 rotate2d(float _angle){
-    return mat2(cos(_angle),-sin(_angle),
-                sin(_angle),cos(_angle));
-}
+
 
 mat3 rotation3dY(float angle) {
     float s = sin(angle);
@@ -69,7 +67,11 @@ mat3 rotation3dY(float angle) {
     );
   }
   
-  
+float easeOut(float x, float power) {
+    return 1.0 - pow(1.0 - x, power);
+}
+//HERE!!!!! - find vector the points between p0 and p2 for facing dicrection
+//the flip it for orthongal direction vector!!
 void main() {
     vec3 pos = position;
 
@@ -79,7 +81,7 @@ void main() {
    
     pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
-     vec3 bladeDirection = normalize(vec3(1,2,0));
+     vec3 bladeDirection = normalize(vec3(sin(time),2,0));
     
     vec3 bladeHeight = vec3(0, 1, 0);
     float grassLeaning = 4.0f;
@@ -96,7 +98,7 @@ void main() {
 
     pos += c;
     pos += instancePosition;
-    pos -= sin(hash(instancePosition.xz));
+    pos -= sin(hash(instancePosition.xz))-0.2; //randomise height by sinking into terrain
   
 
     vY = pos.y; // Pass Y position to fragment shader
@@ -126,39 +128,9 @@ varying vec3 vPosition;
 
 void main() {
     // Light properties
-    vec3 lightPosition = vec3(10.0,-1000.0, 0.0); // Example light position
-    vec3 lightColor = vec3(1.0, 1.0, 1.0);
-    
-    // Material properties
-    vec3 ambientColor = vec3(0.1, 0.4, 0.1);
-    vec3 diffuseColor = vec3(0.2, 0.9, 0.2);
-
-
-    // Normalize interpolated normal
-    vec3 N = normalize(bladeNormal);
-
-    // Calculate light direction
-    vec3 lightDir = normalize(lightPosition - vPosition);
-
-    // Calculate view direction (from fragment to camera)
-  
-    // Calculate reflection direction
-    vec3 reflectDir = reflect(-lightDir, N);
-
-    // Calculate ambient component
-    vec3 ambient = ambientColor * lightColor;
-
-    // Calculate diffuse component
-    float diff = max(dot(N, lightDir), 0.0);
-    vec3 diffuse = diffuseColor * lightColor * diff;
-
- 
-    
-
-    // Combine ambient, diffuse, and specular components
-    vec3 result = ambient + diffuse;
-
-    gl_FragColor = vec4(result, 1.0);
+    float greenIntensity = clamp(0.2 + 0.6 * vY,0.2,0.8); // Gradient from darker (0.4) to brighter (1.0)
+    float redIntensity = clamp(0.0 + 0.3 * vY,0.2,0.8); 
+    gl_FragColor = vec4(redIntensity, greenIntensity, 0.0, 1.0); // Green color with gradient
 }
 `;
 
@@ -170,13 +142,14 @@ const material = new THREE.ShaderMaterial({
     fragmentShader: fragmentShader,
     side: THREE.DoubleSide,
     uniforms: {
-        time: { value: 0.0 }
+        time: { value: 0.0 },
+        cameraPosition: { value: camera.position }
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.2,1, 1,10);
+const grassGeometry = new THREE.PlaneGeometry(0.15,1, 1,10);
 
-const grassCount = 1000000;
+const grassCount = 2000000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
     positions.push(Math.random() * 500 - 250);  // x position
@@ -223,12 +196,8 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
-   
-    //plane.rotation.y += 0.05;
-   
-   // uniforms.u_time.value += 0.05;
-   // uniforms.time.value = clock.elapsedTime();
     material.uniforms.time.value = clock.getElapsedTime();
+    material.uniforms.cameraPosition.value.copy(camera.position); // Update camera position uniform
     renderer.render(scene, camera);
 }
 
