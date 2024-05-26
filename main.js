@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({antialias : true});
 //const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -16,7 +16,7 @@ document.body.appendChild(renderer.domElement);
 
 TODO:
 tips of grass 
-wind!!!
+wind!!! - wind is not blowing in perlin noise direction
 shading of grass 
 normals for grass - see gdc talk
 grass length retain 
@@ -34,6 +34,7 @@ attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
 varying vec3 bladeNormal;
 varying vec3 vPosition;
+varying float leanIntesity;
 
 vec3 Lerp(vec3 a, vec3 b, float t) {
     return a + t * (b - a);
@@ -70,21 +71,55 @@ mat3 rotation3dY(float angle) {
 float easeOut(float x, float power) {
     return 1.0 - pow(1.0 - x, power);
 }
+
+float random (in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))
+                 * 43758.5453123);
+}
+
+// 2D Noise based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise (in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners percentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
 //HERE!!!!! - find vector the points between p0 and p2 for facing dicrection
 //the flip it for orthongal direction vector!!
 void main() {
     vec3 pos = position;
 
   
-
-    mat3 roty = rotation3dY(hash(instancePosition.xz));
+    //wind is not blowing in perlin noise direction
+    mat3 roty = rotation3dY(hash(instancePosition.xz)*4.);
    
     pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
-     vec3 bladeDirection = normalize(vec3(sin(time),2,0));
+    //wind is not blowing in perlin noise direction
+    leanIntesity = noise(instancePosition.xz*0.02 + time *1.2 ) +0.2;
+     vec3 bladeDirection = normalize(vec3(leanIntesity * 4.,2,0));
     
     vec3 bladeHeight = vec3(0, 1, 0);
-    float grassLeaning = 4.0f;
+    
+    float grassLeaning = 4.;
+
 
     vec3 p0 = vec3(0, 0, 0);
     vec3 p1 = bladeHeight;
@@ -125,12 +160,14 @@ const fragmentShader = /* glsl */ `
 varying float vY; // Receiving the Y position from vertex shader
 varying vec3 bladeNormal; // Receiving the normal from vertex shader
 varying vec3 vPosition;
+varying float leanIntesity;
 
 void main() {
     // Light properties
     float greenIntensity = clamp(0.2 + 0.6 * vY,0.2,0.8); // Gradient from darker (0.4) to brighter (1.0)
     float redIntensity = clamp(0.0 + 0.3 * vY,0.2,0.8); 
-    gl_FragColor = vec4(redIntensity, greenIntensity, 0.0, 1.0); // Green color with gradient
+    //gl_FragColor = vec4(leanIntesity, leanIntesity, leanIntesity, 1.0); // Green color with gradient
+    gl_FragColor = vec4(redIntensity, greenIntensity, 0., 1.0);
 }
 `;
 

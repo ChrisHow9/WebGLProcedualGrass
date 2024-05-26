@@ -12,6 +12,8 @@ webgpu not compatbible with safrai,
 webgl is a potential option but is somewhat barebones and math libaries may be a little undercooked
 three js offers built in libaries for webgl with some tradeoff in having less felxiability
 
+WebGPU (experimental), SVG and CSS3D
+
 Core Deliverable 
 
 - Represenation of grass using bezier curves 
