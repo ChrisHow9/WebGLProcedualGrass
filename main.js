@@ -23,13 +23,10 @@ document.body.appendChild(renderer.domElement);
 TODO:
 tips of grass 
 wind!!! - wind is not blowing in perlin noise direction
-shading of grass 
 retain length
-normals for grass - see gdc talk - calulate direction vector with p0 and p2
 grass length retain 
-debgug values ui
-grass geo generator
-
+grass geo generator?? level of detail
+bend normal vector
 
 
 */
@@ -37,6 +34,7 @@ grass geo generator
 
 const vertexShader = /* glsl */ `
 uniform float time;
+uniform float windSpeed;
 attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
 varying vec3 bladeNormal;
@@ -120,8 +118,8 @@ void main() {
     pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
     //wind is not blowing in perlin noise direction
-    leanIntesity = noise(instancePosition.xz*0.02 + time *1.2 ) +0.2;
-    vec3 bladeDirection = normalize(vec3(-leanIntesity *2.,0,-1));
+    leanIntesity = noise(instancePosition.xz*0.02 + time *windSpeed ) +0.2;
+    vec3 bladeDirection = normalize(vec3(leanIntesity *2.,0,-1));
     
     vec3 bladeHeight = vec3(0, 1, 0);
     
@@ -227,7 +225,21 @@ const fragmentShaders = {
         gl_FragColor = vec4(leanIntesity,leanIntesity,leanIntesity, 1.0);
     }
     `,
-    
+    normal: /* glsl */ `
+    varying float vY; // Receiving the Y position from vertex shader
+    varying vec3 bladeNormal; // Receiving the normal from vertex shader
+    varying vec3 vPosition;
+    varying float leanIntesity;
+
+    uniform vec3 lightPosition; // Light position
+    uniform vec3 viewPosition; // Viewer position
+
+    void main() {
+        // Basic shading components
+        vec3 color = vec3(0.2, 0.8, 0.2); // Basic green color
+        gl_FragColor = vec4(abs(bladeNormal), 1.0);
+    }
+    `,
 
     basic: /* glsl */ `
         varying float vY; // Receiving the Y position from vertex shader
@@ -253,8 +265,10 @@ function updateShader() {
 
 const lightPos = new THREE.Vector3(1, 100, 100);
 
+
 const options = {
-    shader: 'phong'
+    shader: 'phong',
+    windSpeed: 2.
 
 };
 // Initialize dat.GUI
@@ -262,6 +276,7 @@ const gui = new dat.GUI();
 gui.add(lightPos, 'x', -200, 200).name('Light X');
 gui.add(lightPos, 'y', -200, 200).name('Light Y');
 gui.add(lightPos, 'z', -200, 200).name('Light Z');
+gui.add(options, 'windSpeed', 0, 5).name('Wind Speed');
 gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Shader').onChange(updateShader);
 
 const material = new THREE.ShaderMaterial({
@@ -271,7 +286,8 @@ const material = new THREE.ShaderMaterial({
     uniforms: {
         time: { value: 0.0 },
         cameraPosition: { value: camera.position },
-        lightPosition: { value: lightPos }
+        lightPosition: { value: lightPos },
+        windSpeed: { value: options.windSpeed }
     }
 });
 
@@ -329,12 +345,8 @@ function animate() {
     //const lightPos = new THREE.Vector3(1,500, 100);
     material.uniforms.lightPosition.value = lightPos;
 
-    
-
-
-
-
-  
+ 
+    material.uniforms.windSpeed.value = options.windSpeed;
 
     material.uniforms.time.value = clock.getElapsedTime();
     material.uniforms.cameraPosition.value.copy(camera.position); // Update camera position uniform
