@@ -1,10 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import * as dat from 'lil-gui'
+
+
+
+
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
-const renderer = new THREE.WebGLRenderer({antialias : true});
-//const renderer = new THREE.WebGLRenderer({ antialias: true });
+//const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -18,7 +24,8 @@ TODO:
 tips of grass 
 wind!!! - wind is not blowing in perlin noise direction
 shading of grass 
-normals for grass - see gdc talk
+retain length
+normals for grass - see gdc talk - calulate direction vector with p0 and p2
 grass length retain 
 debgug values ui
 grass geo generator
@@ -108,13 +115,13 @@ void main() {
 
   
     //wind is not blowing in perlin noise direction
-    mat3 roty = rotation3dY(hash(instancePosition.xz)*4.);
+    mat3 roty = rotation3dY(hash(instancePosition.xz)*20.);
    
     pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
     //wind is not blowing in perlin noise direction
     leanIntesity = noise(instancePosition.xz*0.02 + time *1.2 ) +0.2;
-     vec3 bladeDirection = normalize(vec3(leanIntesity * 4.,2,0));
+    vec3 bladeDirection = normalize(vec3(-leanIntesity *2.,0,-1));
     
     vec3 bladeHeight = vec3(0, 1, 0);
     
@@ -122,7 +129,7 @@ void main() {
 
 
     vec3 p0 = vec3(0, 0, 0);
-    vec3 p1 = bladeHeight;
+    vec3 p1 = bladeHeight ;
     vec3 p2 = grassLeaning * bladeDirection + bladeHeight;
 
     float t = clamp(pos.y, 0.0, 1.0);
@@ -133,7 +140,7 @@ void main() {
 
     pos += c;
     pos += instancePosition;
-    pos -= sin(hash(instancePosition.xz))-0.2; //randomise height by sinking into terrain
+    pos.y -= sin(hash(instancePosition.xz)); //randomise height by sinking into terrain
   
 
     vY = pos.y; // Pass Y position to fragment shader
@@ -142,56 +149,140 @@ void main() {
     //vec3 sideVec = normalize(cross(bladeDirection, tangent));
 
     vec3 tangent = bezierDerivative(p0, p1, p2, t);
-    vec3 sideVec = normalize(cross(bladeDirection, tangent));
+    //vec3 sideVec = normalize(cross(p1-p2, tangent));
+    vec3 newDirection = p1 - p2; //might be opposite 
+    vec3 sideVec = normalize(vec3(newDirection.z,newDirection.y,-newDirection.x));
     
 
     //vec3 sideVec = normalize(vec3(bladeDirection.z, 0, -bladeDirection.x));
-    vec3 normal = normalize(cross(tangent, sideVec));
+    vec3 normal = normalize(cross(sideVec, tangent));
 
     
     bladeNormal = normal;
+    bladeNormal = roty * normal;
     vPosition = pos;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
 `;
 
-const fragmentShader = /* glsl */ `
-varying float vY; // Receiving the Y position from vertex shader
-varying vec3 bladeNormal; // Receiving the normal from vertex shader
-varying vec3 vPosition;
-varying float leanIntesity;
+const fragmentShaders = {
+    phong: /* glsl */ `
+        varying float vY; // Receiving the Y position from vertex shader
+        varying vec3 bladeNormal; // Receiving the normal from vertex shader
+        varying vec3 vPosition;
+        varying float leanIntesity;
 
-void main() {
-    // Light properties
-    float greenIntensity = clamp(0.2 + 0.6 * vY,0.2,0.8); // Gradient from darker (0.4) to brighter (1.0)
-    float redIntensity = clamp(0.0 + 0.3 * vY,0.2,0.8); 
-    //gl_FragColor = vec4(leanIntesity, leanIntesity, leanIntesity, 1.0); // Green color with gradient
-    gl_FragColor = vec4(redIntensity, greenIntensity, 0., 1.0);
+        uniform vec3 lightPosition; // Light position
+        uniform vec3 viewPosition; // Viewer position
+
+        void main() {
+            // Phong shading components
+            vec3 ambientColor = vec3(0.1, 0.3, 0.1); // Ambient color (dark green)
+            vec3 diffuseColor = vec3(0.2, 0.8, 0.2); // Diffuse color (green)
+            vec3 specularColor = vec3(1.0, 1.0, 1.0); // Specular color (white)
+            float shininess = 32.0; // Shininess factor for specular highlight
+
+            // Normalize the normal vector
+            vec3 N = normalize(bladeNormal);
+
+            // Calculate the light direction
+            vec3 L = normalize(lightPosition - vPosition);
+
+            // Calculate the view direction
+            vec3 V = normalize(viewPosition - vPosition);
+
+            // Calculate the reflection direction
+            vec3 R = reflect(-L, N);
+
+            // Ambient component
+            vec3 ambient = ambientColor;
+
+            // Diffuse component
+            float diff = max(dot(N, L), 0.0);
+            vec3 diffuse = diff * diffuseColor;
+
+            // Specular component
+            float spec = pow(max(dot(R, V), 0.0), shininess);
+            vec3 specular = spec * specularColor;
+
+            // Combine the components
+            vec3 color =  diffuse + ambient;
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    `,
+    perlin: /* glsl */ `
+    varying float vY; // Receiving the Y position from vertex shader
+    varying vec3 bladeNormal; // Receiving the normal from vertex shader
+    varying vec3 vPosition;
+    varying float leanIntesity;
+
+    uniform vec3 lightPosition; // Light position
+    uniform vec3 viewPosition; // Viewer position
+
+    void main() {
+        // Basic shading components
+        vec3 color = vec3(0.2, 0.8, 0.2); // Basic green color
+        gl_FragColor = vec4(leanIntesity,leanIntesity,leanIntesity, 1.0);
+    }
+    `,
+    
+
+    basic: /* glsl */ `
+        varying float vY; // Receiving the Y position from vertex shader
+        varying vec3 bladeNormal; // Receiving the normal from vertex shader
+        varying vec3 vPosition;
+        varying float leanIntesity;
+
+        uniform vec3 lightPosition; // Light position
+        uniform vec3 viewPosition; // Viewer position
+
+        void main() {
+            // Basic shading components
+            vec3 color = vec3(0.2, 0.8, 0.2); // Basic green color
+            gl_FragColor = vec4(color, 1.0);
+        }
+    `
+};
+
+function updateShader() {
+    material.fragmentShader = fragmentShaders[options.shader];
+    material.needsUpdate = true;
 }
-`;
 
+const lightPos = new THREE.Vector3(1, 100, 100);
 
+const options = {
+    shader: 'phong'
 
+};
+// Initialize dat.GUI
+const gui = new dat.GUI();
+gui.add(lightPos, 'x', -200, 200).name('Light X');
+gui.add(lightPos, 'y', -200, 200).name('Light Y');
+gui.add(lightPos, 'z', -200, 200).name('Light Z');
+gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Shader').onChange(updateShader);
 
 const material = new THREE.ShaderMaterial({
     vertexShader: vertexShader,
-    fragmentShader: fragmentShader,
+    fragmentShader: fragmentShaders[options.shader],
     side: THREE.DoubleSide,
     uniforms: {
         time: { value: 0.0 },
-        cameraPosition: { value: camera.position }
+        cameraPosition: { value: camera.position },
+        lightPosition: { value: lightPos }
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.15,1, 1,10);
+const grassGeometry = new THREE.PlaneGeometry(0.17,1, 1,8);
 
-const grassCount = 2000000;
+const grassCount = 500000;
 const positions = [];
 for (let i = 0; i < grassCount; i++) {
-    positions.push(Math.random() * 500 - 250);  // x position
+    positions.push(Math.random() * 200 - 100);  // x position
     positions.push(0.5);  // y position
-    positions.push(Math.random() * 500 - 250);  // z position
+    positions.push(Math.random() * 200 - 100);  // z position
 }
 
 const instancedGeometry = new THREE.InstancedBufferGeometry().copy(grassGeometry);
@@ -230,9 +321,21 @@ controls = new OrbitControls( camera, renderer.domElement );
 
 const clock = new THREE.Clock();
 
+
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
+
+    //const lightPos = new THREE.Vector3(1,500, 100);
+    material.uniforms.lightPosition.value = lightPos;
+
+    
+
+
+
+
+  
+
     material.uniforms.time.value = clock.getElapsedTime();
     material.uniforms.cameraPosition.value.copy(camera.position); // Update camera position uniform
     renderer.render(scene, camera);
