@@ -22,11 +22,14 @@ document.body.appendChild(renderer.domElement);
 
 TODO:
 tips of grass 
-wind!!! - wind is not blowing in perlin noise direction
+debug convert degrees to xy vector 
 retain length
 grass length retain 
 grass geo generator?? level of detail
 bend normal vector
+
+
+!!! will need to look at grass leaning and heigh, add this to debug
 
 
 */
@@ -35,6 +38,8 @@ bend normal vector
 const vertexShader = /* glsl */ `
 uniform float time;
 uniform float windSpeed;
+uniform vec2 windDirection;
+
 attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
 varying vec3 bladeNormal;
@@ -118,8 +123,12 @@ void main() {
     pos = pos * roty;
     vec3 bladePosition = vec3(0, 0, 0);
     //wind is not blowing in perlin noise direction
-    leanIntesity = noise(instancePosition.xz*0.02 + time *windSpeed ) +0.2;
-    vec3 bladeDirection = normalize(vec3(leanIntesity *2.,0,-1));
+    
+    vec2 windPos;
+    windPos.x = instancePosition.x *0.02 +time *windSpeed * windDirection.x;
+    windPos.y = instancePosition.z *0.02 +time *windSpeed *  windDirection.y;
+    leanIntesity = noise(windPos ) +0.2;
+    vec3 bladeDirection = normalize(vec3(-windDirection.x,0,-windDirection.y));
     
     vec3 bladeHeight = vec3(0, 1, 0);
     
@@ -128,7 +137,7 @@ void main() {
 
     vec3 p0 = vec3(0, 0, 0);
     vec3 p1 = bladeHeight ;
-    vec3 p2 = grassLeaning * bladeDirection + bladeHeight;
+    vec3 p2 = grassLeaning * leanIntesity * bladeDirection + bladeHeight;
 
     float t = clamp(pos.y, 0.0, 1.0);
 
@@ -268,7 +277,8 @@ const lightPos = new THREE.Vector3(1, 100, 100);
 
 const options = {
     shader: 'phong',
-    windSpeed: 2.
+    windSpeed: 2. 
+    
 
 };
 // Initialize dat.GUI
@@ -279,6 +289,14 @@ gui.add(lightPos, 'z', -200, 200).name('Light Z');
 gui.add(options, 'windSpeed', 0, 5).name('Wind Speed');
 gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Shader').onChange(updateShader);
 
+const windDirection = { x: 1.0, y: 1.0 };
+gui.add(windDirection, 'x', -1, 1).name('Wind Direction X').onChange(() => {
+    material.uniforms.windDirection.value.set(windDirection.x, windDirection.y);
+});
+gui.add(windDirection, 'y', -1, 1).name('Wind Direction Y').onChange(() => {
+    material.uniforms.windDirection.value.set(windDirection.x, windDirection.y);
+});
+
 const material = new THREE.ShaderMaterial({
     vertexShader: vertexShader,
     fragmentShader: fragmentShaders[options.shader],
@@ -287,7 +305,9 @@ const material = new THREE.ShaderMaterial({
         time: { value: 0.0 },
         cameraPosition: { value: camera.position },
         lightPosition: { value: lightPos },
-        windSpeed: { value: options.windSpeed }
+        windSpeed: { value: options.windSpeed },
+        windDirection: {value: new THREE.Vector2(1.0, 1.0)}
+
     }
 });
 
