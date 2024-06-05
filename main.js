@@ -3,34 +3,21 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'lil-gui'
 
 
-
-
-
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 scene.background = new THREE.Color(0x87CEEB);
-//const renderer = new THREE.WebGLRenderer();
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-
-
-//var camControls = new THREE.FirstPersonControls(camera);
 
 /*
 
 TODO:
 tips of grass 
 debug convert degrees to xy vector 
-retain length
-grass length retain 
 grass geo generator?? level of detail
 bend normal vector -- NEED TEXTURE COORDS
-
-
-!!! will need to look at grass leaning and heigh, add this to debug
-
 
 */
 
@@ -42,6 +29,8 @@ uniform vec2 windDirection;
 uniform float grassLength;
 uniform float turbolance;
 uniform float grassLean;
+varying float groundRand;
+
 
 attribute vec3 instancePosition;
 varying float vY; // Varying variable to pass Y position to fragment shader
@@ -50,6 +39,26 @@ varying vec3 rotatedNormal1;
 varying vec3 rotatedNormal2;
 varying vec3 vPosition;
 varying float leanIntesity;
+varying float cloudColor;
+
+void MakePersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height)
+{
+    //Persistent length
+    vec3 v01 = v1 - v0;
+    vec3 v12 = v2 - v1;
+    float lv01 = length(v01);
+    float lv12 = length(v12);
+
+    float L1 = lv01 + lv12;
+    float L0 = length(v2-v0);
+    float L = (2.0f * L0 + L1) / 3.0f; //http://steve.hollasch.net/cgindex/curves/cbezarclen.html
+
+    float ldiff = height / L;
+    v01 = v01 * ldiff;
+    v12 = v12 * ldiff;
+    v1 = v0 + v01;
+    v2 = v1 + v12;
+}
 
 vec3 Lerp(vec3 a, vec3 b, float t) {
     return a + t * (b - a);
@@ -230,50 +239,49 @@ float pnoise(vec2 P, vec2 rep)
   return 2.3 * n_xy;
 }
 
-// demo code:
-
-//HERE!!!!! - find vector the points between p0 and p2 for facing dicrection
-//the flip it for orthongal direction vector!!
 void main() {
     vec3 pos = position;
 
-  
-    //wind is not blowing in perlin noise direction
     mat3 roty = rotation3dY(hash(instancePosition.xz)*20.);
    
     pos = pos * roty;
-    vec3 bladePosition = vec3(0, 0, 0);
-    //wind is not blowing in perlin noise direction
     
     vec2 windPos;
     windPos.x = instancePosition.x *turbolance +time *windSpeed * windDirection.x;
     windPos.y = instancePosition.z *turbolance +time *windSpeed *  windDirection.y;
-    leanIntesity = ( noise(windPos ) );
- 
 
-        // Add a small epsilon to avoid mapping to 0
-    float epsilon = 0.01;
     float noiseValue = cnoise(windPos);
 
-    windPos.x = instancePosition.x *turbolance/5. +time *windSpeed/2. * windDirection.x;
-    windPos.y = instancePosition.z *turbolance/5. +time *windSpeed/2. *  windDirection.y;
+    windPos.x = instancePosition.x *turbolance*4. +time *windSpeed*4. * windDirection.x;
+    windPos.y = instancePosition.z *turbolance*4. +time *windSpeed*4. *  windDirection.y;
     float noiseValue2 = cnoise(windPos);
-    noiseValue = noiseValue +1.; // Ensure noiseValue is never 0 or 1
-    leanIntesity = ((noiseValue  ) + cos(instancePosition.x/8.+time))+1./2.;
 
-    
+    windPos.x = instancePosition.x *0.01 +time *windSpeed/10. * windDirection.x;
+    windPos.y = instancePosition.z *0.01 +time *windSpeed/10.*  windDirection.y;
+
+    cloudColor  = cnoise(windPos);
+    cloudColor = ((cloudColor + 1.0) / 2.0  );
+   
+    leanIntesity =( ((noiseValue + 1.0) / 2.0  )+ ((noiseValue2 + 1.0) / 2.0  ))/2.;
+
+    windPos.x = instancePosition.x *0.02;
+    windPos.y = instancePosition.z *0.02;
+
+    groundRand = cnoise(windPos);
+    groundRand = clamp(((groundRand+ 1.0) / 2.0  ),0.5,1.);
+
     vec3 bladeDirection = normalize(vec3(-windDirection.x,0,-windDirection.y));
-    
     vec3 bladeHeight = vec3(0, grassLength, 0);
     
-    float grassLeaning = grassLean + 1.5;
-
+    float grassLeaning = grassLean+2.5;
 
     vec3 p0 = vec3(0, 0, 0);
     vec3 p1 = bladeHeight ;
-    vec3 p2 = grassLeaning * (leanIntesity +0.1) * bladeDirection + bladeHeight;
+    vec3 p2 = grassLeaning * (leanIntesity+0.2 ) * bladeDirection + bladeHeight;
 
     float t = clamp(pos.y, 0.0, 1.0);
+
+    MakePersistentLength(p0,p1,p2,grassLength);
 
     vec3 a = Lerp(p0, p1, t);
     vec3 b = Lerp(p1, p2, t);
@@ -283,42 +291,30 @@ void main() {
     pos += instancePosition;
     pos.y -= sin(hash(instancePosition.xz)); //randomise height by sinking into terrain
   
-
-    vY = pos.y; // Pass Y position to fragment shader
-
-    vec3 upDirection = vec3(0, 1, 0); // Assume y-axis is up
-    //vec3 sideVec = normalize(cross(bladeDirection, tangent));
+    vY = pos.y/grassLength; // Pass Y position to fragment shader
 
     vec3 tangent = bezierDerivative(p0, p1, p2, t);
-    //vec3 sideVec = normalize(cross(p1-p2, tangent));
     vec3 newDirection = p1 - p2; //might be opposite 
     vec3 sideVec = normalize(vec3(newDirection.z,newDirection.y,-newDirection.x));
     
-
-    //vec3 sideVec = normalize(vec3(bladeDirection.z, 0, -bladeDirection.x));
     vec3 normal = normalize(cross(sideVec, tangent));
-    //normal = vec3(0,1,0);
 
-    // Adjust normal based on blade's orientation
-    //normal = mix(normal, vec3(1, 1, 1), abs(dot(normal, vec3(0, 1, 0))));
     bladeNormal = normal;
     bladeNormal = roty * normal;
     vPosition = pos;
-
-   // vec3 rotatedNormal1 = rotation3dY(PI * 0.3) * normal;
-  //  vec3 rotatedNormal2 = rotation3dY(-PI * 0.3) * normal;
-
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 }
 `;
 
 const fragmentShaders = {
-    phong: /* glsl */ `
+    phong_shading: /* glsl */ `
         varying float vY; // Receiving the Y position from vertex shader
         varying vec3 bladeNormal; // Receiving the normal from vertex shader
         varying vec3 vPosition;
         varying float leanIntesity;
+        varying float groundRand;
+        varying float cloudColor;
         varying vec3 rotatedNormal1;
         varying vec3 rotatedNormal2;
 
@@ -328,8 +324,8 @@ const fragmentShaders = {
         void main() {
             // Phong shading components
             vec3 ambientColor = vec3(0.2, 0.4, 0.2); // Ambient color (dark green)
-            vec3 diffuseColor = vec3(0.2, 0.5, 0.2); // Diffuse color (green)
-            vec3 specularColor = vec3(1.0, 1.0, 1.0); // Specular color (white)
+            vec3 diffuseColor = vec3(0.2, 0.5+ groundRand, 0.2); // Diffuse color (green)
+    
             float shininess = 128.0; // Shininess factor for specular highlight
 
             // Normalize the normal vector
@@ -340,9 +336,6 @@ const fragmentShaders = {
 
             vec3 L = normalize(-lightPosition );
 
-            // Calculate the view direction
-            vec3 V = normalize(viewPosition - vPosition);
-
             // Calculate the reflection direction
             vec3 R = reflect(-L, N);
 
@@ -351,19 +344,15 @@ const fragmentShaders = {
 
             // Diffuse component
             float diff = max(dot(N, L), 0.0);
-            vec3 diffuse = diff * diffuseColor;
-
-            // Specular component
-            float spec = pow(max(dot(R, V), 0.0), shininess);
-            vec3 specular = spec * specularColor;
+            vec3 diffuse = diff * diffuseColor * cloudColor;
 
             // Combine the components
-            vec3 color =  diffuse + ambient ;
+            vec3 color =  (diffuse + ambient) ;
 
             gl_FragColor = vec4(color, 1.0);
         }
     `,
-    perlin: /* glsl */ `
+    perlin_wind_vis: /* glsl */ `
     varying float vY; // Receiving the Y position from vertex shader
     varying vec3 bladeNormal; // Receiving the normal from vertex shader
     varying vec3 vPosition;
@@ -379,7 +368,7 @@ const fragmentShaders = {
             (vec3(leanIntesity,leanIntesity,leanIntesity)), 1.0);
     }
     `,
-    normal: /* glsl */ `
+    normals_vis: /* glsl */ `
     varying float vY; // Receiving the Y position from vertex shader
     varying vec3 bladeNormal; // Receiving the normal from vertex shader
     varying vec3 vPosition;
@@ -395,19 +384,22 @@ const fragmentShaders = {
     }
     `,
 
-    basic: /* glsl */ `
+    flat_shading: /* glsl */ `
         varying float vY; // Receiving the Y position from vertex shader
         varying vec3 bladeNormal; // Receiving the normal from vertex shader
         varying vec3 vPosition;
         varying float leanIntesity;
+        varying float cloudColor;
+        
 
         uniform vec3 lightPosition; // Light position
         uniform vec3 viewPosition; // Viewer position
 
         void main() {
-            // Basic shading components
-            vec3 color = vec3(0.2, 0.8, 0.2); // Basic green color
-            gl_FragColor = vec4(color, 1.0);
+            float greenIntensity =  1. * vY; // Gradient from darker (0.4) to brighter (1.0)
+            float redIntensity =  0.2 * vY;
+            vec3 ambientColor = vec3(redIntensity, greenIntensity, 0.1)* (cloudColor+0.5); 
+            gl_FragColor = vec4(ambientColor, 1.0);
         }
     `
 };
@@ -421,32 +413,42 @@ const lightPos = new THREE.Vector3(1, -100, 1);
 
 
 const options = {
-    shader: 'phong',
+    shader: 'phong_shading',
     windSpeed: 0.3,
-    grassLength: 4,
+    grassLength: 8,
     turbolance: 0.05,
-    grassLean: 4
+    grassLean: 10,
+    windAngle: 0.0,
+    grassArea: 50,
+    grassDensity: 10000
     
 
 };
 // Initialize dat.GUI
 const gui = new dat.GUI();
-gui.add(lightPos, 'x', -200, 200).name('Light X');
-gui.add(lightPos, 'y', -200, 500).name('Light Y');
-gui.add(lightPos, 'z', -200, 200).name('Light Z');
-gui.add(options, 'windSpeed', 0, 5).name('Wind Speed');
+
+gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Debug View').onChange(updateShader);
+
+gui.add(options, 'windSpeed', 0, 2.5).name('Wind Speed');
+gui.add(options, 'turbolance', 0, 0.1).name('Wind Turbolance');
 gui.add(options, 'grassLength', 0, 10).name('Grass Length');
-gui.add(options, 'turbolance', 0, 0.1).name('turbolance');
-gui.add(options, 'grassLean', 0, 20).name('grassLean');
-gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Shader').onChange(updateShader);
+gui.add(options, 'grassLean', 0, 25).name('Grass Leaning');
+gui.add(options, 'grassArea', 50, 500).name('Grass Area').onChange(updateGrass);
+gui.add(options, 'grassDensity', 1000, 800000).name('Grass Blades').onChange(updateGrass);
+
 
 const windDirection = { x: 1.0, y: 1.0 };
-gui.add(windDirection, 'x', -1, 1).name('Wind Direction X').onChange(() => {
+
+
+
+gui.add(options, 'windAngle', 0, 360).name('Wind Direction').onChange(() => {
+    const radians = options.windAngle * Math.PI / 180; // Convert angle to radians
+    windDirection.x = Math.sin(radians);
+    windDirection.y = Math.cos(radians);
+
     material.uniforms.windDirection.value.set(windDirection.x, windDirection.y);
 });
-gui.add(windDirection, 'y', -1, 1).name('Wind Direction Y').onChange(() => {
-    material.uniforms.windDirection.value.set(windDirection.x, windDirection.y);
-});
+
 
 const material = new THREE.ShaderMaterial({
     vertexShader: vertexShader,
@@ -465,33 +467,32 @@ const material = new THREE.ShaderMaterial({
     }
 });
 
-const grassGeometry = new THREE.PlaneGeometry(0.17,1, 1,18);
+const grassGeometry = new THREE.PlaneGeometry(0.17,1, 1,12);
 
-const grassCount = 500000;
-const positions = [];
-for (let i = 0; i < grassCount; i++) {
-    positions.push(Math.random() * 400 - 200);  // x position
-    positions.push(0.5);  // y position
-    positions.push(Math.random() * 400 - 200);  // z position
+let instancedMesh;
+function updateGrass() {
+    const grassCount = options.grassDensity;
+    const positions = [];
+    for (let i = 0; i < grassCount; i++) {
+        positions.push(Math.random() * options.grassArea - options.grassArea / 2); // x position
+        positions.push(0.5); // y position
+        positions.push(Math.random() * options.grassArea - options.grassArea / 2); // z position
+    }
+
+    const instancedGeometry = new THREE.InstancedBufferGeometry().copy(grassGeometry);
+    instancedGeometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(new Float32Array(positions), 3));
+
+    if (instancedMesh) {
+        scene.remove(instancedMesh);
+    }
+    instancedMesh = new THREE.InstancedMesh(instancedGeometry, material, grassCount);
+    scene.add(instancedMesh);
 }
 
-const instancedGeometry = new THREE.InstancedBufferGeometry().copy(grassGeometry);
-instancedGeometry.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(new Float32Array(positions), 3));
-const instancedMesh = new THREE.InstancedMesh(instancedGeometry, material, grassCount);
-scene.add(instancedMesh);
+updateGrass();
 
 
-//onsole.log(geometry.position.x)/*
-/*
-const plane = new THREE.Mesh(geometry, material);
-plane.position.y = 0.5;
-scene.add(plane);  
 
-const dotGeometry = new THREE.BufferGeometry();
-dotGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0]), 3));
-const dotMaterial = new THREE.PointsMaterial({ size: 0.1, color: 0xff0000 });
-const dot = new THREE.Points(dotGeometry, dotMaterial);
-scene.add(dot);*/
 
 const groundGeometry = new THREE.PlaneGeometry(500, 500);
 const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 }); // Forest green
@@ -502,8 +503,15 @@ scene.add(ground);
 
 
 
-camera.position.z = 6;
-camera.position.y = 3;
+camera.position.z = 10;
+camera.position.y = 10;
+camera.up.set(0, 1, 0);
+camera.lookAt(20,10000,0);
+camera.updateProjectionMatrix();
+
+
+
+
 
 let controls;
 
@@ -511,12 +519,18 @@ controls = new OrbitControls( camera, renderer.domElement );
 
 const clock = new THREE.Clock();
 
+camera.position.z = 40;
+camera.position.y = 10;
+camera.up.set(0, 1, 0);
+camera.lookAt(0,10,0);
+camera.updateProjectionMatrix();
+
 
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
 
-    //const lightPos = new THREE.Vector3(1,500, 100);
+   
     material.uniforms.lightPosition.value = lightPos;
 
  
@@ -531,3 +545,9 @@ function animate() {
 }
 
 animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
