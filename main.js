@@ -287,11 +287,13 @@ void main() {
     vec3 b = Lerp(p1, p2, t);
     vec3 c = Lerp(a, b, t);
 
+    vY = pos.y; 
+
     pos += c;
     pos += instancePosition;
     pos.y -= sin(hash(instancePosition.xz)); //randomise height by sinking into terrain
   
-    vY = pos.y/grassLength; // Pass Y position to fragment shader
+   // vY = pos.y/grassLength; // Pass Y position to fragment shader
 
     vec3 tangent = bezierDerivative(p0, p1, p2, t);
     vec3 newDirection = p1 - p2; //might be opposite 
