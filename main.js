@@ -423,7 +423,6 @@ const options = {
     windAngle: 0.0,
     grassArea: 50,
     grassDensity: 10000
-    
 
 };
 // Initialize dat.GUI
