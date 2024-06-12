@@ -2,6 +2,8 @@
 
 ## [Live Demo](https://ruby-steep-kilometer.glitch.me/) 🔴
 
+![](https://github.com/ChrisHow9/WebGLProcedualGrass/blob/main/grass.gif)
+
 ## How to run locally 
 
 npm install 
