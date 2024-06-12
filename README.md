@@ -1,6 +1,8 @@
-# Procedual Grass modeling and rending using quadratic bezier curves
+# Procedual grass modeling and rending using quadratic bezier curves
 
 ## [Live Demo](https://ruby-steep-kilometer.glitch.me/) 🔴
+
+![](https://github.com/ChrisHow9/WebGLProcedualGrass/blob/main/grass.gif)
 
 ## How to run locally 
 
@@ -26,41 +28,43 @@ WebGPU (experimental), SVG and CSS3D
 
 ## Core Deliverable 
 
-- Represenation of grass using bezier curves 
+- [x] Represenation of grass using bezier curves 
 
-- Insance rendering for field 
+- [x] Insance rendering for field 
 
-- grass should retian length 
+- [x] Grass should retian length 
 
-- wind patterns using noise
+- [x] Wind patterns using noise
 
-
-- use Seiler’s Interpolation!!
 
 
  ## Extensions -
 
-- level of detail
+- [ ] level of detail
 
-- culling 
+- [ ] culling 
 
-- shading
+- [x] shading
 
-- anti alising
+- [x] anti alising
 
-- debug ui
+- [x] debug ui
 
-- clumping
+- [ ] clumping
 
-- varing each blades properties
+- [x] varing each blades properties
 
-- grass blade thicken depedning on view space
+- [ ] grass blade thicken depedning on view space
+
+## Evaulation - 
+show fps 
+was the project a success
 
 ## Further exploration - 
 
 - whilst I have found splines used for creating and rendering I have not found the use bezier curves used for short fur rending - at least I have not seen it from a roudamenatry search 
 
-
+- use Seiler’s Interpolation!!
 - Frustum culling
 
 
