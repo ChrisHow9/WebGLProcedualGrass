@@ -56,7 +56,9 @@ WebGPU (experimental), SVG and CSS3D
 
 - [ ] grass blade thicken depedning on view space
 
-
+## Evaulation - 
+show fps 
+was the project a success
 
 ## Further exploration - 
 
