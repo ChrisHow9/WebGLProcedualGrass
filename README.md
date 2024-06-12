@@ -1,5 +1,13 @@
 # Procedual Grass modeling and rending using quadratic bezier curves
 
+## [Live Demo](https://ruby-steep-kilometer.glitch.me/) 🔴
+
+## How to run locally 
+
+npm install 
+
+npx vite
+
 ## Goals of project - 
 
 provide non triivial implenattion of grass generationa and rendering 
