@@ -1,4 +1,4 @@
-# Procedual Grass modeling and rending using quadratic bezier curves
+# Procedual grass modeling and rending using quadratic bezier curves
 
 ## [Live Demo](https://ruby-steep-kilometer.glitch.me/) 🔴
 
