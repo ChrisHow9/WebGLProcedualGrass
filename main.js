@@ -432,7 +432,7 @@ gui.add(options, 'shader', Object.keys(fragmentShaders)).name('Debug View').onCh
 
 gui.add(options, 'windSpeed', 0, 2.5).name('Wind Speed');
 gui.add(options, 'turbolance', 0, 0.1).name('Wind Turbolance');
-gui.add(options, 'grassLength', 0, 10).name('Grass Length');
+gui.add(options, 'grassLength', 0.5, 10).name('Grass Length');
 gui.add(options, 'grassLean', 0, 25).name('Grass Leaning');
 gui.add(options, 'grassArea', 50, 500).name('Grass Area').onChange(updateGrass);
 gui.add(options, 'grassDensity', 1000, 800000).name('Grass Blades').onChange(updateGrass);
