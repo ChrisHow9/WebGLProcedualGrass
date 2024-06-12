@@ -28,16 +28,14 @@ WebGPU (experimental), SVG and CSS3D
 
 ## Core Deliverable 
 
-- Represenation of grass using bezier curves 
+- [x] Represenation of grass using bezier curves 
 
-- Insance rendering for field 
+- [x] Insance rendering for field 
 
-- grass should retian length 
+- [x] Grass should retian length 
 
-- wind patterns using noise
+- [x] Wind patterns using noise
 
-
-- use Seiler’s Interpolation!!
 
 
  ## Extensions -
@@ -57,6 +55,8 @@ WebGPU (experimental), SVG and CSS3D
 - varing each blades properties
 
 - grass blade thicken depedning on view space
+
+- use Seiler’s Interpolation!!
 
 ## Further exploration - 
 
