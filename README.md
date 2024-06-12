@@ -1,4 +1,6 @@
-Goals of project - 
+#Procedual Grass modeling and rending using quadratic bezier curves
+
+##Goals of project - 
 
 provide non triivial implenattion of grass generationa and rendering 
 
@@ -6,7 +8,7 @@ This is a demo so solution should be time effecient to implement ie do not spend
 
 Should be online and available to whowever may want to access it (should be taken into considertion for performanc and which platforms it can run on)
 
-Research - 
+##Research - 
 
 webgpu not compatbible with safrai,
 webgl is a potential option but is somewhat barebones and math libaries may be a little undercooked
@@ -14,7 +16,7 @@ three js offers built in libaries for webgl with some tradeoff in having less fe
 
 WebGPU (experimental), SVG and CSS3D
 
-Core Deliverable 
+##Core Deliverable 
 
 - Represenation of grass using bezier curves 
 
@@ -23,6 +25,9 @@ Core Deliverable
 - grass should retian length 
 
 - wind patterns using noise
+
+
+- use Seiler’s Interpolation!!
 
 
 Extensions -
@@ -43,7 +48,7 @@ Extensions -
 
 - grass blade thicken depedning on view space
 
-Further exploration - 
+##Further exploration - 
 
 - whilst I have found splines used for creating and rendering I have not found the use bezier curves used for short fur rending - at least I have not seen it from a roudamenatry search 
 
@@ -51,7 +56,9 @@ Further exploration -
 - Frustum culling
 
 
-sources -
+##sources -
+
+https://stemkoski.github.io/Three.js/#shader-simple
 
 https://www.youtube.com/watch?v=2h5NX9tIdno
 - check last sections about making pretty
