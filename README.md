@@ -6,17 +6,16 @@
 
 ## How to run locally 
 
-npm install 
+## How to Run Locally 
 
-npx vite
+1. Install dependencies:
+   ```bash
+   npm install
+   npx vite
 
 ## Goals of project - 
 
-provide non triivial implenattion of grass generationa and rendering 
-
-This is a demo so solution should be time effecient to implement ie do not spend 4 hour improving performance by 5%
-
-Should be online and available to whowever may want to access it (should be taken into considertion for performanc and which platforms it can run on)
+The main goal of this project is to provide a non-trivial implementation of grass generation and rendering using quadratic Bezier curves. The solution is designed to be time-efficient in terms of implementation, focusing on quick development over extensive performance optimizations. The project aims to be accessible online for anyone who wants to view it, taking into account performance considerations and platform compatibility.
 
 ## Research - 
 
