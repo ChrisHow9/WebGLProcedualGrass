@@ -4,13 +4,11 @@
 
 ![](https://github.com/ChrisHow9/WebGLProcedualGrass/blob/main/grass.gif)
 
-## How to run locally 
 
 ## How to Run Locally 
 
 Requires npm package manganer and vite build tools
 
-   ```bash
    npm install
    npx vite
 
@@ -22,13 +20,13 @@ The main goal of this project is to provide a non-trivial implementation of gras
 
 My initial curioisty rose from watch this gdc talk with the implenataion of grass in ghost of tschumia, from here I looked in further devloper blogs and technical papers to go into more detail and how to translate this into a browser native application.
 
-Muitple web based graphics apis were considered for the project, WebGpu is one of the newest and most advanst apis with support for compute shaders which could acclerate the initial generation of grass blades, however is still relevtively early in devlopment and is not supported on some major browsers such as safarai.
+Muitple web based graphics apis were considered for the project, WebGpu is one of the newest and most advanst apis with support for compute shaders which could acclerate the initial generation of grass blades, however is still relevtively early in devlopment and is not supported on some major browsers such as safarai. The alternative I used instead was the libaray three.js which provides a modern interface for webgl and provides out of the box maths libaries.
 
 The model of a grass blade will be defined as straight vertically alianed model, the horiztiobal value of its vertices will be then offset in the vertex shader by how it is evaulated agaisnt a bezier curve. The bezier curve will be have three control points p0, represents the base of the blade, p1 its height, and p2 how far the grass curve should bend. P0 and p1 will remain static whilst p2 will be modified over time to create the effect of movement and wind effecting the grass blade. The dervitave of the bezier curver is used to calulate the normal  and is passed to the fragment shader for lighting calculations.
 
 To create the effect of wind mutiple passes of Perlin noise are used at differnet sclaes to and then scrolled across the blades of grass using a time variable passed to the shader.Perlin noise is also used to to create the effect of clouds by darkening each grass blade based from its postion. To render many grass blades used in the scene, instanced rendereing is used to render all the grass in a single call. This however comes with the downside of losing frustum culling, implenting frustum culling is possible for instanced rendering is possible but out of scope for this project.
 
-WebGPU (experimental), SVG and CSS3D
+
 
 ## Core Deliverable 
 
@@ -46,7 +44,7 @@ WebGPU (experimental), SVG and CSS3D
 
 - [ ] level of detail
 
-- [ ] culling 
+- [ ] frustum culling 
 
 - [x] shading
 
