@@ -70,7 +70,6 @@ To create the effect of wind, multiple passes of Perlin noise at different scale
 - Implement frustum culling to further improve performance.
 
 
-## Sources -
 
 ## References and Resources
 
