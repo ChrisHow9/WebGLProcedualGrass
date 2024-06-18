@@ -37,7 +37,7 @@ The model of a grass blade is defined as a straight, vertically aligned entity o
 To create the effect of wind, multiple passes of Perlin noise at different scales are used and then scrolled across the blades of grass using a time variable passed to the shader. Perlin noise is also employed to create the effect of clouds by darkening each grass blade based on its position. To render the numerous grass blades in the scene, instanced rendering is used, allowing all the grass to be rendered in a single call. This approach, however, comes with the downside of losing frustum culling. Implementing frustum culling for instanced rendering is possible but is out of scope for this project.
 
 ![](https://github.com/ChrisHow9/WebGLProcedualGrass/blob/main/readme/perlin.png)
-*Visualtiosation of perlin noise where the light value of each grass blade represents the intensity of the wind force* 
+*Visualisation of Perlin noise where the light value of each grass blade represents the intensity of the wind force.* 
 
 ## Core Deliverables
 
